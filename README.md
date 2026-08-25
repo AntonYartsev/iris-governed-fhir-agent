@@ -6,10 +6,19 @@ One agent, one skill, three tools, one MCP server, one `docker compose up`
 
 Most AI Hub examples show what an agent can do. This one shows what it cannot. The agent reads one patients data and nothing else: no other patients, no bulk exports, no unapproved resource types. This is enforced by the tools and the policy, not by the prompt
 
-Built and checked on `irishealth-community 2026.3.0AI.126.0` (AI Hub EAP)
-
 ![demo.gif](demo.gif)
 
+Built and checked on `irishealth-community 2026.3.0AI.126.0` (AI Hub EAP)
+
+`package/` ships those guards as a standalone IPM module, reusable outside this demo
+
+This application implements two ideas from the InterSystems Ideas Portal:
+
+**[DPI-I-986](https://ideas.intersystems.com/ideas/DPI-I-986) - My First Agent
+(End-To-End Starter).**
+
+**[DPI-I-985](https://ideas.intersystems.com/ideas/DPI-I-985) - MCP Data
+Exposure Toolkit.**
 ---
 
 ## Quickstart
