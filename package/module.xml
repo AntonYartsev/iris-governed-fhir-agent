@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+  <Document name="iris-governed-fhir-agent.ZPM">
+    <Module>
+      <Name>iris-governed-fhir-agent</Name>
+      <Version>0.1.0</Version>
+      <Description>Governed, patient-scoped FHIR R4 tools for InterSystems AI Hub agents and external MCP clients. Requires IRIS for Health with AI Hub enabled (EAP build); will not compile on a stock community image. Installing only loads and compiles classes - call GovernedFHIR.Setup.Install:Run() yourself to create a demo FHIR endpoint.</Description>
+      <Keywords>fhir,ai-hub,mcp,agent,healthcare,governance</Keywords>
+      <KeywordsList>fhir,ai-hub,mcp,agent,healthcare,governance</KeywordsList>
+      <Packaging>module</Packaging>
+      <SourcesRoot>src</SourcesRoot>
+      <Resource Name="GovernedFHIR.PKG"/>
+      <UnitTest Name="/tests" Package="GovernedFHIR.Tests" Phase="test"/>
+    </Module>
+  </Document>
+</Export>

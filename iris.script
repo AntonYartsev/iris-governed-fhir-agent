@@ -1,0 +1,35 @@
+    zn "%SYS"
+
+    // Unexpire passwords. Not a production setting!
+    do ##class(Security.Users).UnExpireUserPasswords("*")
+
+    // Enable callin for Embedded Python
+    do ##class(Security.Services).Get("%Service_CallIn",.prop)
+    set prop("Enabled")=1
+    set prop("AutheEnabled")=48
+    do ##class(Security.Services).Modify("%Service_CallIn",.prop)
+
+    // Install IPM
+    set r = ##class(%Net.HttpRequest).%New()
+    set r.Server = "pm.community.intersystems.com"
+    set r.SSLConfiguration = "ISC.FeatureTracker.SSL.Config"
+    do r.Get("/packages/zpm/latest/installer")
+    do $system.OBJ.LoadStream(r.HttpResponse.Data,"c")
+
+    zpm "enable -community"
+
+    zn "IRISAPP"
+
+    set ^UnitTestRoot="/home/irisowner/dev/package/tests"
+
+    // The package only loads and compiles classes
+    // :1 = abort the build if the load fails.
+    zpm "load /home/irisowner/dev/package -v":1
+
+    // Demo initialisation lives here!
+    do ##class(GovernedFHIR.Setup.Install).Run()
+    do ##class(GovernedFHIR.Setup.MCPSetup).Run()
+
+    do ##class(GovernedFHIR.Setup.Install).Doctor()
+
+    halt

@@ -1,0 +1,41 @@
+name: iris-governed-fhir-agent
+
+x-image: &image
+  context: .
+  dockerfile: Dockerfile
+  args:
+    # Base image tag created by docker load of the EAP tar.gz. Default is the x86_64 tag
+    # You may set IRIS_IMAGE in .env (or the environment) to the tag
+    IRIS_IMAGE: ${IRIS_IMAGE:-intersystems/irishealth-community:2026.3.0AI.126.0}
+
+services:
+  iris:
+    build: *image
+    env_file:
+      - .env
+    environment:
+      - ISC_CPF_MERGE_FILE=/home/irisowner/dev/merge.cpf
+    ports:
+      - "1972:1972"    # superserver, this is what the MCP bridge talks to
+      - "52773:52773"  # web + management portal + FHIR endpoint
+    # No source mount on purpose. Everything in the image at build.
+    # For an edit-reload loop, add this back locally:
+    #   volumes:
+    #     - ./:/home/irisowner/dev
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/irissys/bin/iris qlist IRIS | grep -q running"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  mcp:
+    build: *image
+    init: true
+    # The image starts IRIS by default and here we want only the bridge.
+    entrypoint: ["/usr/irissys/bin/iris-mcp-server", "-c", "/home/irisowner/dev/config_http.toml", "run"]
+    depends_on:
+      iris:
+        condition: service_healthy
+    ports:
+      - "8080:8080"    # MCP over HTTP
+    restart: unless-stopped

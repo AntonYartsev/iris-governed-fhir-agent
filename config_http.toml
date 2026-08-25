@@ -1,0 +1,15 @@
+[[iris]]
+name = "governed-fhir"
+server = { host = "iris", port = 1972, username = "_SYSTEM", password = "SYS" }
+endpoints = [
+    { path = "/mcp/governed-fhir" }
+]
+
+[mcp]
+transport = "http"
+host = "0.0.0.0"
+port = 8080
+
+[logging]
+level = "info"
+output = "stderr"
