@@ -14,11 +14,10 @@ Built and checked on `irishealth-community 2026.3.0AI.126.0` (AI Hub EAP)
 
 This application implements two ideas from the InterSystems Ideas Portal:
 
-**[DPI-I-986](https://ideas.intersystems.com/ideas/DPI-I-986) - My First Agent
-(End-To-End Starter).**
+**[DPI-I-986](https://ideas.intersystems.com/ideas/DPI-I-986)** - My First Agent (End-To-End Starter)
 
-**[DPI-I-985](https://ideas.intersystems.com/ideas/DPI-I-985) - MCP Data
-Exposure Toolkit.**
+**[DPI-I-985](https://ideas.intersystems.com/ideas/DPI-I-985)** - MCP Data Exposure Toolkit
+
 ---
 
 ## Quickstart
