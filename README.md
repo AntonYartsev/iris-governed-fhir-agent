@@ -4,25 +4,27 @@ InterSystems AI Hub agent over a FHIR R4 repository
 
 One agent, one skill, three tools, one MCP server, one `docker compose up`
 
-Most AI Hub examples show what an agent can do. This one shows what it cannot. The agent reads one patients data and nothing else: no other patients, no bulk exports, no unapproved resource types. This is enforced by the tools and the policy, not by the prompt
+Most AI Hub examples show what an agent can do. This one shows what it cannot. The agent reads one patient's data and nothing else: no other patients, no bulk exports, no unapproved resource types. This is enforced by the tools and the policy, not by the prompt
 
 ![demo.gif](demo.gif)
 
-Built and checked on `irishealth-community 2026.3.0AI.126.0` (AI Hub EAP)
+Built and tested on `irishealth-community 2026.3.0AI.126.0` (AI Hub EAP)
 
-`package/` ships those guards as a standalone IPM module, reusable outside this demo
+`package/` ships the enforcement layer as a standalone IPM module, reusable outside this demo
 
 This application implements two ideas from the InterSystems Ideas Portal:
 
-**[DPI-I-986](https://ideas.intersystems.com/ideas/DPI-I-986)** - My First Agent (End-To-End Starter)
+**[DPI-I-986](https://ideas.intersystems.com/ideas/DPI-I-986) - My First Agent
+(End-To-End Starter).**
 
-**[DPI-I-985](https://ideas.intersystems.com/ideas/DPI-I-985)** - MCP Data Exposure Toolkit
+**[DPI-I-985](https://ideas.intersystems.com/ideas/DPI-I-985) - MCP Data
+Exposure Toolkit.**
 
 ---
 
 ## Quickstart
 
-On this moment the EAP image is **not on a public registry**, but may be downloaded from the [EAP portal](https://evaluation.intersystems.com/Eval/early-access/AIHub) and load:
+At the moment the EAP image is **not on a public registry**, but you can download it from the [EAP portal](https://evaluation.intersystems.com/Eval/early-access/AIHub) and load it:
 
 ```bash
 # x86_64 - default
@@ -38,17 +40,17 @@ cp .env.example .env      # any OpenAI compatible API key
 docker compose up -d --build
 ```
 
-`*docker load` prints the tag it created. If it is not the x86_64 tag, put it into `.env` as `IRIS_IMAGE=`*
+*`docker load` prints the tag it created. If it is not the x86_64 tag, put it into `.env` as `IRIS_IMAGE=`.*
 
-Everything is **baked into the image at build time** and container starts ready without durable volume. After recreate container you get the same clean state, with an empty audit table. Its good for a demo, not for a real deployment
+Everything is **baked into the image at build time**, and the container starts ready without a durable volume. After recreating the container you get the same clean state, with an empty audit table. It's good for a demo, not for a real deployment
 
-Synthea insert digits into patient names, so search by a part of the family name and let `FindPatient` do the rest:
+Synthea inserts digits into patient names, so search by a part of the family name and let `FindPatient` do the rest:
 
 ```bash
 docker compose exec iris iris session IRIS -U IRISAPP '##class(GovernedFHIR.AI.Agent).Ask("What is going on with patient Kuphal?")'
 ```
 
-If something looks wrong, run `##class(GovernedFHIR.Setup.Install).Doctor()`. I**t prints the state of every part**
+If something looks wrong, run `##class(GovernedFHIR.Setup.Install).Doctor()`. **It prints the state of every part**
 
 ---
 
@@ -85,11 +87,11 @@ Allergies
   (AllergyIntolerance/3d852e71-d854-5968-b2ad-cb74344f7b2f)
 ```
 
-Every fact comes with resource id so clinician can open the record and check
+Every fact comes with a resource id, so a clinician can open the record and check
 
 ---
 
-## Try to break!
+## Try to break it
 
 These attempts run through an external MCP client. Our system prompt is not used, **the refusals come from the ToolSet itself**
 
@@ -123,9 +125,9 @@ These attempts run through an external MCP client. Our system prompt is not used
 
 The first two attempts came back as MCP errors. This one came back as a normal tool result. The payload is a refusal. `Guard` refuses by returning a value, not by failing
 
-**4. Inside the scope, everything still works**: after three blocks, the client switched to the patients Encounters and this allowed type, inside the compartment
+**4. Inside the scope, everything still works**: after three denials, the client switched to the patient's Encounters - an allowed resource type - inside the compartment
 
-All in the audit:
+All of it lands in the audit table:
 
 ```
 ID  ToolName           PatientId               Allowed  Channel  ErrorText
@@ -137,15 +139,15 @@ ID  ToolName           PatientId               Allowed  Channel  ErrorText
 6   FhirSearch         3d852e71-d854-5968-...  1        mcp
 ```
 
-Rows 1-2 come from the agent. Rows 3-6 come from an external client on the same ToolSet. Same tools, same policies, same table - that is the main claim. Row 6 was allowed but clamped `_count=10000` became `_count=25`
+Rows 1-2 come from the agent. Rows 3-6 come from an external client on the same ToolSet. Same tools, same policies, same table - that is the main claim. Row 6 was allowed but clamped: `_count=10000` became `_count=25`
 
 **Two fixes were needed to make these rows honest**
 
 **First**: `Compartment` writes its own audit row before it returns an error, because a denied call **never reaches the audit policy**
 
-**And second**: `AuditLog` reads the payload, not the `%Status`, because a `Guard` refusal is a normal return value. **Without the fix it is logged as success**
+**Second**: `AuditLog` reads the payload, not the `%Status`, because a `Guard` refusal is a normal return value. **Without the fix it would be logged as a success**
 
-The rules covered by unit tests without LLM involved:
+The rules are covered by unit tests, with no LLM involved:
 
 ```bash
 docker compose exec iris iris session IRIS -U IRISAPP '##class(%UnitTest.Manager).RunTest("GovernedFHIR/Tests")'
@@ -157,12 +159,12 @@ docker compose exec iris iris session IRIS -U IRISAPP '##class(%UnitTest.Manager
 
 | Rule | Where it lives | What it stops |
 | --- | --- | --- |
-| Patient compartment lock | `patientId` is required query is built server-side | Reads across patients. Every tool except `FindPatient` needs a patient. The caller never builds the compartment query |
+| Patient compartment lock | `patientId` is required; the query is built server-side | Reads across patients. Every tool except `FindPatient` needs a patient. The caller never builds the compartment query |
 | Resource type allowlist | `Guard.AllowedResources()` | `Practitioner`, `Binary`, `AuditEvent`, anything not reviewed |
 | Search parameter allowlist | `Guard.AllowedParams()` | `_include`, `_revinclude`, `_has`  |
 | Size cap | `Guard.MAXROWS`, `Guard.MAXCHARS` | A tool call that quietly turns into a bulk export |
 
-`Core.Guard` lives inside the tool body. It is the foundation: all four rules run on every path. Even a direct terminal call `##class(GovernedFHIR.AI.Tools).FhirSearch(...)` goes through it and no policy sees that call
+`Core.Guard` lives inside the tool body. It is the foundation: all four rules run on every path. Even a direct terminal call `##class(GovernedFHIR.AI.Tools).FhirSearch(...)` goes through it, even though no policy sees that call
 
 `AI.Policy.Compartment` in the ToolSet. It checks patient scope and resource type one more time, before the tool body runs. So a refused call **never reaches the FHIR server**
 
@@ -172,7 +174,22 @@ docker compose exec iris iris session IRIS -U IRISAPP '##class(%UnitTest.Manager
 
 ![architecture.png](architecture.png)
 
-The dashed line explain: `Core` does not depend on AI Hub. Its unit tests need no LLM, no network, no API key
+The dashed line means: `Core` does not depend on AI Hub. Its unit tests need no LLM, no network, no API key
+
+---
+
+## Use it as a starter
+
+Everything is small on purpose - one class per concern. To turn it into *your* first agent:
+
+- `GovernedFHIR.AI.Tools` - the three tool bodies. Replace them with your own domain
+- `AI.Policy.Compartment` - the ToolSet policy that runs before any tool body
+- `Core.Guard` - allowlists and caps. Plain ObjectScript, no AI Hub dependency
+- `GovernedFHIR.AI.Agent` - wiring: model, skill, toolset
+- `GovernedFHIR.Setup.Install` - FHIR endpoint, Synthea load, `Doctor()`
+- `Setup/MCPSetup.cls` - the MCP application
+
+The guard layer also ships as a standalone IPM module in `package/`, so the next application can declare it as a dependency instead of copying classes
 
 ---
 
@@ -195,7 +212,7 @@ The second call comes back refused. Both calls are now audit rows with `Channel 
 
 ## What this demo is not
 
-- **Not a production access-control model.** Lock lives in the tool layer, not in user authentication
+- **Not a production access-control model.** The lock lives in the tool layer, not in user authentication
 - **Not authenticated where it matters.** The MCP application accepts callers without authentication. This is set in `Setup/MCPSetup.cls`. So the governed tools are the *only* thing between a client and the data. That is the point
 - **Not clinically validated.** The data is synthetic (Synthea)
 
