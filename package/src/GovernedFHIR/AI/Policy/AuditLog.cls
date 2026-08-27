@@ -46,8 +46,11 @@ Method %LogExecution(
 		If 'allowed {
 			Set errorText = $System.Status.GetErrorText(status)
 		} Else {
-			Set errorText = ..DeniedReason($Get(result))
-			If errorText '= "" Set allowed = 0
+			Set denialReason = ..DeniedReason($Get(result))
+			If denialReason '= "" {
+				Set allowed = 0
+				Set errorText = denialReason
+			}
 		}
 
 		Do ##class(GovernedFHIR.Audit.Entry).Log(name, args, patientId, allowed, duration, resultChars, errorText)
