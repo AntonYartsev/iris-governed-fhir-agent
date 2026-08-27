@@ -19,6 +19,7 @@ ClassMethod Run() As %Status
 {
 	$$$QuitOnError(..InstallEndpoint())
 	$$$QuitOnError(..LoadData())
+	Do ##class(GovernedFHIR.Audit.Entry).EnsureEvent()
 	Return $$$OK
 }
 

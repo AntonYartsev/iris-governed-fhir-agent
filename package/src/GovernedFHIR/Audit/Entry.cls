@@ -23,6 +23,12 @@ Property ErrorText As %String(MAXLEN = 1000);
 /// Agent or mcp
 Property Channel As %String(MAXLEN = 32);
 
+Parameter AUDITSOURCE As STRING = "GovernedFHIR";
+
+Parameter AUDITTYPE As STRING = "ToolCall";
+
+Parameter AUDITNAME As STRING = "Denied";
+
 Index ByTs On Ts;
 
 Index ByPatient On PatientId;
@@ -54,7 +60,31 @@ ClassMethod Log(
 	Set entry.ResultChars = resultChars
 	Set entry.ErrorText = $Extract(errorText, 1, 1000)
 	Set entry.Channel = channel
-	Return entry.%Save()
+	Set sc = entry.%Save()
+	// A refusal is the row an audit trail exists for, so it goes into the IRIS audit
+	// database too - the one a security team already watches (caps at 128)
+	If 'allowed Do $System.Security.Audit(..#AUDITSOURCE, ..#AUDITTYPE, ..#AUDITNAME, arguments, $Extract(toolName_" denied: "_errorText, 1, 128))
+	Return sc
+}
+
+/// $System.Security.Audit needs the audit subsystem on and the event defined, both in %SYS
+ClassMethod EnsureEvent()
+{
+	New $Namespace
+	Set $Namespace = "%SYS"
+	Try {
+		Do ##class(Security.System).Get(, .props)
+		If $Get(props("AuditEnabled")) '= 1 {
+			Set props("AuditEnabled") = 1
+			Do ##class(Security.System).Modify(, .props)
+		}
+		If '##class(Security.Events).Exists(..#AUDITSOURCE, ..#AUDITTYPE, ..#AUDITNAME) {
+			Do ##class(Security.Events).Create(..#AUDITSOURCE, ..#AUDITTYPE, ..#AUDITNAME, "Denied GovernedFHIR tool call")
+		}
+		Write "IRIS audit event ready - ", ..#AUDITSOURCE, "/", ..#AUDITTYPE, "/", ..#AUDITNAME, !
+	} Catch ex {
+		Write "IRIS audit setup skipped: ", ex.DisplayString(), !
+	}
 }
 
 Storage Default

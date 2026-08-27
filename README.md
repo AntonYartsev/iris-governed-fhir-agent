@@ -141,11 +141,15 @@ ID  ToolName           PatientId               Allowed  Channel  ErrorText
 
 Rows 1-2 come from the agent. Rows 3-6 come from an external client on the same ToolSet. Same tools, same policies, same table - that is the main claim. Row 6 was allowed but clamped: `_count=10000` became `_count=25`
 
-**Two fixes were needed to make these rows honest**
+Writing tool calls to a table is not our idea - it is what the AI Hub docs tell you to do. `%AI.Policy.ConsoleAudit` writes to the current device, which over MCP is the HTTP response body, so it breaks every `tools/call`. `AGENTS.md` says: subclass `%AI.Policy.Audit` and write to a persistent class
+
+**Two fixes on top of that were needed to make these rows honest**
 
 **First**: `Compartment` writes its own audit row before it returns an error, because a denied call **never reaches the audit policy**
 
 **Second**: `AuditLog` reads the payload, not the `%Status`, because a `Guard` refusal is a normal return value. **Without the fix it would be logged as a success**
+
+Denials also go into the IRIS audit database as `GovernedFHIR / ToolCall / Denied`, so they land where a security team already looks - **System Administration > Security > Auditing > View Audit Database**
 
 The rules are covered by unit tests, with no LLM involved:
 
@@ -167,6 +171,24 @@ docker compose exec iris iris session IRIS -U IRISAPP '##class(%UnitTest.Manager
 `Core.Guard` lives inside the tool body. It is the foundation: all four rules run on every path. Even a direct terminal call `##class(GovernedFHIR.AI.Tools).FhirSearch(...)` goes through it, even though no policy sees that call
 
 `AI.Policy.Compartment` in the ToolSet. It checks patient scope and resource type one more time, before the tool body runs. So a refused call **never reaches the FHIR server**
+
+---
+
+## Why not SMART on FHIR scopes?
+
+Fair question, IRIS for Health already has this. `HS.FHIRServer.Util.OAuth2Token` checks SMART scopes on every request: a `patient/Observation.rs` token gets one patient's Observations and nothing else. That is rules 1 and 2 of the table above, at the FHIR server, not in a tool
+
+Three reasons this demo does not lean on it:
+
+- A scope governs an OAuth client calling the REST API. An MCP client has no patient context claim to put in a token
+- A scope cannot say "no `_include`", "25 rows", or "these seven types". Those are tool-shaped limits
+- A scope leaves no record of **which tool was called with what arguments**. That is the audit row, and it is what a review actually asks for
+
+Same story for `HS.FHIRServer.API.Interactions` - `OnBeforeRequest`, `PostProcessSearch` and friends are the right place for consent rules. They see a FHIR request. They do not see a tool call
+
+The `_count` clamp *is* a duplicate: the endpoint already has `MaxSearchPageSize`. The tool clamps anyway so `package/` is correct wherever it lands. `MAXCHARS` is the one that is not a duplicate - it is about the model's context window, which the FHIR server knows nothing about
+
+**On a real deployment you want both**: SMART scopes on the endpoint, these tools on top
 
 ---
 

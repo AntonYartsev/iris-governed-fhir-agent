@@ -1,9 +1,7 @@
 Include (%AI, %occStatus)
 
-/// One row per tool call.
-/// %AI.Policy.ConsoleAudit is one line to configure but
-/// writes to a console nobody is watching when the toolset is driven over MCP -
-/// which is exactly when you want the record. A SQL table instead.
+/// One row per tool call, as AGENTS.md recommends - %AI.Policy.ConsoleAudit breaks MCP
+/// DeniedReason() below is the part that is not in the docs
 Class GovernedFHIR.AI.Policy.AuditLog Extends %AI.Policy.Audit
 {
 
