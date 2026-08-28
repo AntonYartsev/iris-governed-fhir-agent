@@ -10,6 +10,8 @@ Most AI Hub examples show what an agent can do. This one shows what it cannot. T
 
 Built and tested on `irishealth-community 2026.3.0AI.126.0` (AI Hub EAP)
 
+The story behind this repo: [The greatest trick my guardrails ever pulled was convincing the audit log they never fired](https://community.intersystems.com/post/greatest-trick-my-guardrails-ever-pulled-was-convincing-audit-log-they-never-fired) on the InterSystems Developer Community.
+
 `package/` ships the enforcement layer as a standalone IPM module, reusable outside this demo
 
 This application implements two ideas from the InterSystems Ideas Portal:
