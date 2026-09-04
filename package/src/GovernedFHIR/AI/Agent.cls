@@ -60,7 +60,8 @@ ClassMethod Ask(question As %String) As %Status
 	$$$QuitOnError(agent.%Init())
 
 	Set from = ..LastAuditId() + 1
-	Set session = agent.CreateSession({"temperature": 0, "max_iterations": 12})
+	// No temperature: reasoning models (gpt-5*, o*) only accept 1 and 400 on anything else.
+	Set session = agent.CreateSession({"max_iterations": 12})
 	Set response = agent.Chat(session, question)
 
 	Write !, "> ", question, !!
